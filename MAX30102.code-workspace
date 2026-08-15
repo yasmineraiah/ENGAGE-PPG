@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"name": "Mpy Remote Workspace",
+			"uri": "pico:"
+		}
+	],
+	"settings": {
+		"python.languageServer": "Pylance",
+		"liveServer.settings.multiRootWorkspaceName": "MAX30102"
+	}
+}

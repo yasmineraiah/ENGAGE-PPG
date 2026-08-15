@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX30102 Clinical Telemetry</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;600;700&family=Inter:wght@400;600;700&display=swap');
+
+        :root {
+            --bg-color: #0b0c10;
+            --panel-bg: #13151a;
+            --border-color: #242730;
+            --text-main: #c5c6c7;
+            --text-dim: #737885;
+            --color-bpm: #00ff87;
+            --color-spo2: #00d4ff;
+            --color-alert: #ff003c;
+            --color-warn: #ffb703;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        /* --- GRID LAYOUT --- */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 15px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-panel { grid-column: span 12; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
+        .vital-panel { grid-column: span 3; text-align: center; justify-content: center; position: relative; }
+        .wave-panel { grid-column: span 6; height: 180px; }
+        
+        .trend-panel { grid-column: span 4; height: 220px; }
+        .literature-panel { grid-column: span 12; margin-top: 10px; }
+
+        /* --- TYPOGRAPHY --- */
+        h1 { font-size: 1.4rem; font-weight: 700; color: #fff; letter-spacing: 1px; text-transform: uppercase; }
+        .sub-header { font-family: 'Roboto Mono', monospace; font-size: 0.75rem; color: var(--text-dim); margin-top: 2px; }
+        
+        .panel-title { font-size: 0.7rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px; }
+        
+        .vital-val { font-family: 'Roboto Mono', monospace; font-size: 3.5rem; font-weight: 700; line-height: 1; }
+        .vital-val.bpm { color: var(--color-bpm); }
+        .vital-val.spo2 { color: var(--color-spo2); }
+        .vital-unit { font-size: 0.9rem; color: var(--text-dim); font-weight: 600; margin-left: 4px; }
+
+        /* --- UI COMPONENTS --- */
+        .status-indicator {
+            font-family: 'Roboto Mono', monospace; font-size: 0.8rem; font-weight: 600;
+            display: flex; align-items: center; gap: 10px; padding: 6px 12px;
+            border-radius: 4px; border: 1px solid var(--border-color);
+        }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .dot.pulse { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); } }
+
+        .chart-wrapper { position: relative; height: 100%; width: 100%; }
+
+        /* --- CLINICAL LITERATURE --- */
+        .lit-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; font-size: 0.8rem; line-height: 1.6; color: #9ba0ad;}
+        .lit-card { border-left: 2px solid var(--border-color); padding-left: 12px; }
+        .lit-cite { font-family: 'Roboto Mono', monospace; font-size: 0.65rem; color: var(--text-dim); display: block; margin-top: 8px; border-top: 1px dashed var(--border-color); padding-top: 6px;}
+        .highlight { color: #fff; font-weight: 600; display: block; margin-bottom: 6px;}
+        .pipeline-details summary {
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            user-select: none;
+        }
+        .pipeline-details summary::-webkit-details-marker { display: none; }
+        .pipeline-details summary:hover { color: #fff; }
+        .pipeline-details summary .chevron {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            transition: transform 0.2s ease;
+        }
+        .pipeline-details[open] summary .chevron { transform: rotate(180deg); }
+        .pipeline-details .lit-grid { margin-top: 15px; }
+        .lit-list { list-style: none; padding: 0; margin: 0; }
+        .lit-list li { position: relative; padding-left: 14px; margin-bottom: 6px; }
+        .lit-list li::before { content: "›"; position: absolute; left: 0; color: var(--text-dim); font-weight: 700; }
+
+        /* --- CLINICAL TERMINAL LOG --- */
+        .clinical-log {
+            width: 100%;
+            height: 110px;
+            background: #060708;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.7rem;
+            color: #9ba0ad;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.4);
+            margin-bottom: 15px;
+        }
+        .log-entry { margin-bottom: 4px; border-bottom: 1px dashed var(--border-color); padding-bottom: 2px; }
+        .log-time { color: var(--text-dim); }
+        .log-alert { color: var(--color-alert); font-weight: 600; }
+        .log-warn { color: var(--color-warn); font-weight: 600; }
+        .log-normal { color: var(--color-bpm); }
+        .log-sys { color: var(--color-spo2); }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard">
+        
+        <!-- HEADER -->
+        <div class="header-panel">
+            <div>
+                <h1>Optical DSP Telemetry</h1>
+                <div class="sub-header">MAX30102 | Local Network Stream | I2C Protocol</div>
+            </div>
+            <div class="status-indicator" id="status-box">
+                <div class="dot" id="status-dot" style="background: var(--color-warn);"></div>
+                <span id="status-text">AWAITING CONNECTION</span>
+            </div>
+        </div>
+
+        <!-- VITALS & REAL-TIME WAVEFORM -->
+        <div class="panel vital-panel" style="border-top: 3px solid var(--color-bpm);">
+            <div class="panel-title">Heart Rate (PR)</div>
+            <div><span class="vital-val bpm" id="bpm-val">--</span><span class="vital-unit">bpm</span></div>
+        </div>
+        
+        <div class="panel wave-panel">
+            <div class="panel-title">Real-Time AC Plethysmogram (PPG)</div>
+            <div class="chart-wrapper"><canvas id="ppgChart"></canvas></div>
+        </div>
+
+        <div class="panel vital-panel" style="border-top: 3px solid var(--color-spo2);">
+            <div class="panel-title">Oxygen Saturation (SpO2)</div>
+            <div><span class="vital-val spo2" id="spo2-val">--</span><span class="vital-unit">%</span></div>
+        </div>
+
+        <!-- HISTORICAL TREND GRAPHS -->
+        <div class="panel trend-panel">
+            <div class="panel-title">BPM Trend (60s)</div>
+            <div class="chart-wrapper"><canvas id="bpmTrendChart"></canvas></div>
+        </div>
+
+        <div class="panel trend-panel">
+            <div class="panel-title">SpO2 Trend (60s)</div>
+            <div class="chart-wrapper"><canvas id="spo2TrendChart"></canvas></div>
+        </div>
+
+        <div class="panel trend-panel">
+            <div class="panel-title">Combined Hemodynamic Trend</div>
+            <div class="chart-wrapper"><canvas id="combinedTrendChart"></canvas></div>
+        </div>
+
+        <!-- ACADEMIC LITERATURE PANEL -->
+        <div class="panel literature-panel">
+            <div class="panel-title">System Log</div>
+            <div class="clinical-log" id="clinical-log">
+                <div class="log-entry"><span class="log-time">[SYS]</span> <span class="log-sys">Terminal initialized. Awaiting sensor telemetry...</span></div>
+            </div>
+
+            <details class="pipeline-details">
+                <summary class="panel-title" style="margin-bottom: 0;">DSP Pipeline Summary <span class="chevron">▾</span></summary>
+            <div class="lit-grid">
+                <div class="lit-card">
+                    <span class="highlight">1. Memory Management & LED Auto-Adjustment</span>
+                    <ul class="lit-list">
+                        <li>Fixed-size circular buffers (100 samples, about 2s) hold recent red/IR readings. The oldest sample drops as each new one arrives, so memory use stays constant.</li>
+                        <li>If the IR DC baseline is too weak, LED drive current steps up until signal strength clears a target threshold. This is what compensates for differences in skin tone, tissue depth, and finger placement.</li>
+                        <li>A cooldown period locks out further adjustments until the new brightness has settled. Low or no-contact signal resets LEDs and clears buffers so bad data doesn't propagate.</li>
+                    </ul>
+                    
+                </div>
+                <div class="lit-card">
+                    <span class="highlight">2. Bandpass Filter (AC/DC Split)</span>
+                    <ul class="lit-list">
+                        <li>DC baseline is the rolling average of the buffer, the large slow component from tissue and bone.</li>
+                        <li>AC component is the DC baseline minus the latest sample, the small fast component from blood volume change.</li>
+                        <li>AC is smoothed with a 4-sample moving average (a simple lowpass) to reduce jitter before beat detection.</li>
+                    </ul>
+                    
+                </div>
+                <div class="lit-card">
+                    <span class="highlight">3. SpO2 Calculation (Ratio-of-Ratios)</span>
+                    <ul class="lit-list">
+                        <li>RMS amplitude of the AC component is computed separately for the red and IR channels.</li>
+                        <li>A ratio R is formed from log(AC+DC) minus log(DC) for red, divided by the same for IR. This normalizes out absolute signal strength, working alongside the LED auto-gain in step 1 to keep readings consistent across different fingers.</li>
+                        <li>R is passed through an empirical calibration curve (quadratic, fit to reference data) to output %SpO2, clamped to a plausible 70-100% range.</li>
+                    </ul>
+                    
+                </div>
+                <div class="lit-card">
+                    <span class="highlight">4. BPM Detection (Adaptive Threshold)</span>
+                    <ul class="lit-list">
+                        <li>Beat threshold is recalculated every cycle as 30% of the current RMS IR amplitude, so it scales with signal strength instead of using a fixed cutoff.</li>
+                        <li>A beat is registered when the smoothed AC signal rises above that threshold. The time since the last beat gives an instantaneous BPM.</li>
+                        <li>Instant BPM is only accepted within a 300-1500ms window (40-200 BPM) and blended with the running value (80% old, 20% new) to reduce jitter.</li>
+                    </ul>
+                    
+                </div>
+            </div>
+            </details>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CHART GLOBAL SETTINGS ---
+        Chart.defaults.color = '#737885';
+        Chart.defaults.font.family = "'Roboto Mono', monospace";
+        Chart.defaults.font.size = 10;
+        
+        const gridOptions = { color: '#242730', drawBorder: false };
+        
+        // Fix: Arrays pre-filled with 0 so Chart.js renders immediately. 
+        // 0s on the trend graphs will just clip below the visible Y-axis until real data arrives.
+        const emptyPPG = () => Array(100).fill(0);
+        const emptyTrend = () => Array(60).fill(0);
+
+        // 1. Real-Time PPG Chart (High Speed)
+        const ctxPPG = document.getElementById('ppgChart').getContext('2d');
+        const ppgChart = new Chart(ctxPPG, {
+            type: 'line',
+            data: {
+                labels: emptyPPG(),
+                datasets: [{ borderColor: '#00ff87', borderWidth: 2, pointRadius: 0, tension: 0.3, data: emptyPPG() }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false } } }
+        });
+
+        // 2. BPM Trend Chart (Historical)
+        const ctxBPM = document.getElementById('bpmTrendChart').getContext('2d');
+        const bpmChart = new Chart(ctxBPM, {
+            type: 'line',
+            data: { labels: emptyTrend(), datasets: [{ borderColor: '#00ff87', backgroundColor: 'rgba(0,255,135,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4, data: emptyTrend() }] },
+            options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: gridOptions, min: 40, max: 160 } } }
+        });
+
+        // 3. SpO2 Trend Chart (Historical)
+        const ctxSPO2 = document.getElementById('spo2TrendChart').getContext('2d');
+        const spo2Chart = new Chart(ctxSPO2, {
+            type: 'line',
+            data: { labels: emptyTrend(), datasets: [{ borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4, data: emptyTrend() }] },
+            options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: gridOptions, min: 80, max: 100 } } }
+        });
+
+        // 4. Combined Dual-Axis Chart
+        const ctxCombined = document.getElementById('combinedTrendChart').getContext('2d');
+        const combinedChart = new Chart(ctxCombined, {
+            type: 'line',
+            data: {
+                labels: emptyTrend(),
+                datasets: [
+                    { label: 'BPM', borderColor: '#00ff87', borderWidth: 2, pointRadius: 0, tension: 0.4, yAxisID: 'yBPM', data: emptyTrend() },
+                    { label: 'SpO2', borderColor: '#00d4ff', borderWidth: 2, pointRadius: 0, tension: 0.4, yAxisID: 'ySPO2', data: emptyTrend() }
+                ]
+            },
+            options: { 
+                responsive: true, maintainAspectRatio: false, animation: false, 
+                plugins: { legend: { position: 'top', labels: { boxWidth: 10, usePointStyle: true } } },
+                scales: { 
+                    x: { display: false }, 
+                    yBPM: { type: 'linear', position: 'left', grid: gridOptions, min: 40, max: 160 },
+                    ySPO2: { type: 'linear', position: 'right', grid: { display: false }, min: 80, max: 100 }
+                } 
+            }
+        });
+
+        // --- TERMINAL LOGGER ---
+        const logWindow = document.getElementById('clinical-log');
+        let lastLoggedState = null;
+
+        function logToTerminal(message, cssClass) {
+            const now = new Date();
+            const timeStr = now.toTimeString().split(' ')[0];
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="${cssClass}">${message}</span>`;
+            logWindow.appendChild(entry);
+            logWindow.scrollTop = logWindow.scrollHeight;
+        }
+
+        // --- WEBSOCKET ENGINE ---
+        const ws = new WebSocket('ws://' + window.location.hostname);
+        let frameCounter = 0;
+
+        ws.onopen = () => {
+            document.getElementById('status-dot').style.background = 'var(--color-warn)';
+            document.getElementById('status-dot').classList.remove('pulse');
+            document.getElementById('status-text').innerText = 'LINK ESTABLISHED. AWAITING DATA.';
+            logToTerminal('WebSocket link established. Awaiting sensor data.', 'log-sys');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            // 1. Update High-Speed Waveform
+            const waveArr = ppgChart.data.datasets[0].data;
+            waveArr.push(data.wave);
+            waveArr.shift(); 
+            ppgChart.update();
+
+            // 2. UI Status Management
+            if (data.bpm === 0 || data.spo2 === 0) {
+                document.getElementById('bpm-val').innerText = '--';
+                document.getElementById('spo2-val').innerText = '--';
+                document.getElementById('status-dot').style.background = 'var(--color-warn)';
+                document.getElementById('status-dot').classList.remove('pulse');
+                document.getElementById('status-text').innerText = 'CALIBRATING BASELINE...';
+
+                if (lastLoggedState !== 'CALIBRATING') {
+                    logToTerminal('Buffer below threshold. Calibrating baseline...', 'log-warn');
+                    lastLoggedState = 'CALIBRATING';
+                }
+            } else {
+                document.getElementById('bpm-val').innerText = data.bpm;
+                document.getElementById('spo2-val').innerText = data.spo2;
+                
+                if (data.spo2 < 92) {
+                    document.getElementById('status-dot').style.background = 'var(--color-alert)';
+                    document.getElementById('status-dot').classList.add('pulse');
+                    document.getElementById('status-text').innerText = 'ALERT: CLINICAL HYPOXEMIA DETECTED';
+                    document.getElementById('spo2-val').style.color = 'var(--color-alert)';
+
+                    if (lastLoggedState !== 'HYPOXEMIA') {
+                        logToTerminal(`ALERT: SpO2 dropped to ${data.spo2}%. Hypoxemia threshold breached.`, 'log-alert');
+                        lastLoggedState = 'HYPOXEMIA';
+                    }
+                } else {
+                    document.getElementById('status-dot').style.background = 'var(--color-bpm)';
+                    document.getElementById('status-dot').classList.add('pulse');
+                    document.getElementById('status-text').innerText = 'VITALS LOCKED & STABLE';
+                    document.getElementById('spo2-val').style.color = 'var(--color-spo2)';
+
+                    if (lastLoggedState !== 'STABLE') {
+                        logToTerminal(`Vitals locked. BPM ${data.bpm}, SpO2 ${data.spo2}%.`, 'log-normal');
+                        lastLoggedState = 'STABLE';
+                    }
+                }
+
+                // 3. Update Historical Trend Graphs (Sampled once every ~1 second / 20 frames)
+                frameCounter++;
+                if (frameCounter >= 20) {
+                    frameCounter = 0;
+                    
+                    const pushToChart = (chart, value, datasetIndex = 0) => {
+                        const arr = chart.data.datasets[datasetIndex].data;
+                        arr.push(value);
+                        arr.shift();
+                    };
+
+                    pushToChart(bpmChart, data.bpm);
+                    pushToChart(spo2Chart, data.spo2);
+                    pushToChart(combinedChart, data.bpm, 0); 
+                    pushToChart(combinedChart, data.spo2, 1); 
+                    
+                    bpmChart.update();
+                    spo2Chart.update();
+                    combinedChart.update();
+                }
+            }
+        };
+
+        ws.onclose = () => {
+            document.getElementById('status-dot').style.background = 'var(--color-alert)';
+            document.getElementById('status-dot').classList.remove('pulse');
+            document.getElementById('status-text').innerText = 'CONNECTION TERMINATED';
+            logToTerminal('WebSocket connection closed.', 'log-alert');
+            lastLoggedState = null;
+        };
+    </script>
+</body>
+</html>
