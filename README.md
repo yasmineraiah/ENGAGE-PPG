@@ -1,8 +1,5 @@
 # Pulse Oximetry and Optical Bias: STEM Educational Kit
 
-**Status: Work in Progress**
-
-**Please note that this project is currently in active development. The hardware configurations, software pipelines, educational resources, and documentation outlined below are preliminary and subject to ongoing testing and modification.**
 
 ## Overview
 This repository contains the software implementation for a microcontroller-based pulse oximeter, designed as a hands-on educational outreach kit. It streams live physiological data (PPG waveforms, SpO2, and Heart Rate) from a MAX30102 sensor over a local network via WebSockets to a browser-based clinical dashboard. 
