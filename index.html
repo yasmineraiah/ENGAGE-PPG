@@ -6,7 +6,7 @@
 <title>Pulse Oximetry, Live — MAX30102 Demonstration</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.umd.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
   :root{
     --bg: #f4e4d9;
@@ -21,7 +21,6 @@
     --cyan: #c98276; 
     --amber: #f0ad4e;
     --red: #d9534f;
-    --mono: 'Space Mono', monospace;
     --sans: 'Poppins', sans-serif;
     --radius: 12px;
   }
@@ -61,7 +60,7 @@
   @media (prefers-reduced-motion:reduce){ .screen{ transition:none; } }
 
   .eyebrow{
-    font-family:var(--mono); font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase;
+    font-family:var(--sans); font-size:0.75rem; letter-spacing:0.12em; text-transform:uppercase;
     color:var(--text-dim); margin-bottom:14px; font-weight:700;
   }
 
@@ -96,7 +95,7 @@
     text-align: left;
   }
   .primer-step .num{
-    font-family:var(--mono); font-size:0.9rem; font-weight:700; color:#ffffff; background:var(--border-bright);
+    font-family:var(--sans); font-size:0.9rem; font-weight:700; color:#ffffff; background:var(--border-bright);
     width:32px; height:32px; min-width:32px; display:flex; align-items:center; justify-content:center; border-radius:8px;
   }
   .primer-step h3{ font-size:1rem; font-weight:600; margin-bottom:5px; color: var(--text); }
@@ -149,7 +148,7 @@
   }
   .dash-title{ display:flex; flex-direction:column; gap:3px; }
   .dash-title .name{ font-weight:600; font-size:1.1rem; }
-  .dash-title .sub{ font-family:var(--mono); font-size:0.75rem; font-weight:700; color:var(--text-faint); letter-spacing:0.06em; text-transform:uppercase; }
+  .dash-title .sub{ font-family:var(--sans); font-size:0.75rem; font-weight:700; color:var(--text-faint); letter-spacing:0.06em; text-transform:uppercase; }
 
   .mode-tabs{ display:flex; gap:2px; background:rgba(255,255,255,0.4); border:1px solid var(--border); border-radius:24px; padding:4px; }
   .tab-btn{
@@ -194,7 +193,7 @@
   .chart-container-large{ position:relative; width:100%; height:150px; }
   .chart-container-small{ position:relative; width:100%; height:96px; }
 
-  .stat-value{ font-family:var(--mono); font-size:3.2rem; font-weight:700; line-height:1; text-align:center; letter-spacing:-1px;}
+  .stat-value{ font-family:var(--sans); font-size:3.2rem; font-weight:700; line-height:1; text-align:center; letter-spacing:-1px;}
   .stat-unit{ font-size:1.1rem; font-weight:500; margin-left:4px; color:var(--text-dim); font-family:var(--sans); letter-spacing:0;}
   .stat-true{ color:var(--text); }
   .stat-device{ color:var(--cyan); }
@@ -205,13 +204,13 @@
   }
   .instruction-list .item{ display:flex; gap:12px; align-items:center; font-size:0.95rem; color:var(--text-dim); font-weight:500;}
   .instruction-list .item b{ color:var(--text); font-weight:600; }
-  .instruction-list .n{ font-family:var(--mono); color:var(--cyan); font-weight:700; min-width:16px; background:rgba(255,255,255,0.8); padding:2px 8px; border-radius:6px;}
+  .instruction-list .n{ font-family:var(--sans); color:var(--cyan); font-weight:700; min-width:16px; background:rgba(255,255,255,0.8); padding:2px 8px; border-radius:6px;}
 
   .slider-group{ display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; }
   .slider-group:last-child{ margin-bottom:0; }
   .slider-group .lbl{ width:140px; font-size:0.9rem; font-weight:600; color:var(--text);}
   .slider-group .lbl small{ display:block; font-weight:500; color:var(--text-faint); font-size:0.75rem; margin-top:2px; }
-  .slider-group .val{ width:56px; text-align:right; font-family:var(--mono); font-size:0.9rem; font-weight:700; color:var(--cyan); }
+  .slider-group .val{ width:56px; text-align:right; font-family:var(--sans); font-size:0.9rem; font-weight:700; color:var(--cyan); }
   input[type=range]{ flex:1; accent-color:var(--cyan); height:4px; cursor:pointer; }
 
   .algo-container{ display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; gap:8px; }
@@ -226,7 +225,7 @@
 
   .clinical-log{
     width:100%; height:110px; background:#2b2520; border-radius:var(--radius); padding:16px 20px;
-    font-family:var(--mono); font-size:0.8rem; color:#d8c8bd; overflow-y:auto; border:1px solid var(--border);
+    font-family:var(--sans); font-size:0.8rem; color:#d8c8bd; overflow-y:auto; border:1px solid var(--border);
   }
   .log-entry{ margin-bottom:6px; border-bottom:1px dashed rgba(255,255,255,0.05); padding-bottom:4px;}
   .log-time{ color:var(--text-faint); }
@@ -539,7 +538,7 @@
 
   // ---------- charts ----------
   Chart.defaults.color = '#8a735c';
-  Chart.defaults.font.family = "'Space Mono', monospace";
+  Chart.defaults.font.family = "'Poppins', sans-serif";
   Chart.defaults.font.size = 10;
   const emptyArr = n => Array(n).fill(0);
   const gridOpt = { color: 'rgba(138, 115, 92, 0.15)', drawBorder:false };

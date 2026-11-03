@@ -11,5 +11,35 @@
     ],
     "python.analysis.extraPaths": [
         "~/.micropico-stubs/included"
+    ],
+    "micropico.syncFileTypes": [
+        "py",
+        "html",
+        "js",
+        "css",
+        "png",
+        "woff2"
+    ],
+    "micropico.pyIgnore": [
+        "**/.picowgo",
+        "**/.micropico",
+        "**/.vscode",
+        "**/.gitignore",
+        "**/.git",
+        "**/.DS_Store",
+        "**/project.pico-go",
+        "**/env",
+        "**/venv",
+        "**/.venv",
+        "**/.idea",
+        "**/.claude",
+        "__init__.py",
+        "index.html",
+        "index_depr.html",
+        "main_depr.py",
+        "session_log.csv",
+        "test.py",
+        "README.md",
+        "MAX30102.code-workspace"
     ]
 }
